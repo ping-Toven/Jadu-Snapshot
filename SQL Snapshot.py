@@ -52,28 +52,31 @@ while True:
     for i in range(pageLength):
         tokenID = str(onChainData['result'][i]['token_id'])
         wallet = onChainData['result'][i]['owner_of']
-        try:
-            #using onchain token ID access off-chain metadata for that token, grab relevant values, add to tokenDict and append to dict_list)
-            ocURL = offChainURL + tokenID
-            resp = requests.get(url=ocURL)
-            offChainData = resp.json()
-            for attr in offChainData['attributes']:
-                match attr['trait_type']:
-                    case "TYPE" | "1/1":
-                        tokenTypeValue = attr['value']
-                    case "COLOR":
-                        tokenColorValue = attr['value']
-                    case 'MODIFICATION':
-                        tokenModValue = attr['value']            
-        except:
-            print('Unknown token issue')
-            tokenTypeValue = "Error: Unknown uri metadata issue"
-            tokenModValue = "Error: Unknown uri metadata issue"
-            tokenColorValue = "Error: Unknown uri metadata issue"
+        if DB.staking_check(DB, conn, tokenID, wallet):
+            try:
+                #using onchain token ID access off-chain metadata for that token, grab relevant values, add to tokenDict and append to dict_list)
+                ocURL = offChainURL + tokenID
+                resp = requests.get(url=ocURL)
+                offChainData = resp.json()
+                for attr in offChainData['attributes']:
+                    match attr['trait_type']:
+                        case "TYPE" | "1/1":
+                            tokenTypeValue = attr['value']
+                        case "COLOR":
+                            tokenColorValue = attr['value']
+                        case 'MODIFICATION':
+                            tokenModValue = attr['value']            
+            except:
+                print('Unknown token issue')
+                tokenTypeValue = "Error: Unknown uri metadata issue"
+                tokenModValue = "Error: Unknown uri metadata issue"
+                tokenColorValue = "Error: Unknown uri metadata issue"
+                DB.update_token(DB, conn, tokenID, wallet, tokenTypeValue, tokenModValue, tokenColorValue)
+                tokenTypeValue, tokenColorValue, tokenModValue = '','',''
             DB.update_token(DB, conn, tokenID, wallet, tokenTypeValue, tokenModValue, tokenColorValue)
             tokenTypeValue, tokenColorValue, tokenModValue = '','',''
-        DB.update_token(DB, conn, tokenID, wallet, tokenTypeValue, tokenModValue, tokenColorValue)
-        tokenTypeValue, tokenColorValue, tokenModValue = '','',''
+        elif DB.wallet_check(DB, conn, tokenID, wallet):
+            DB.update_owner(DB, conn, tokenID, wallet)
     if pages != str(onChainData.get('page')):
         params['cursor'] = onChainData.get('cursor')
         print('Finished fetching page ' + str(onChainData.get('page')) + ' data, going to next page')

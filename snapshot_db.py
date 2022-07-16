@@ -63,8 +63,26 @@ class DB_HELPER:
             return False
         return True
     
+    def staking_check(self, conn: sqlite3.Connection, token_id:str, wallet:str):
+        """ Check if the existing wallet is a staking contract. If so, update the token metadata, otherwise don't. 
+        :param conn: db connection obj
+        :param token_id: token_id unique search key for WHERE
+        :param wallet: wallet address value to check DB against
+        :return bool: True = Update the wallet. False = wallet exists
+        """
+        hb_staking ='0xbca0b679f0FF2FD7749ba268551EBf6284768D4E'
+        jp_staking = '0xa92684344223cb5148e54a0d858e34eff12c3735'
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        table_name, = cursor.fetchone()
+        cursor.execute("SELECT wallet FROM {} WHERE token_id = (?)".format(table_name), [token_id])
+        db_wallet, = cursor.fetchone()
+        if db_wallet == hb_staking | db_wallet == jp_staking:
+            return True
+        return False
+
     def wallet_check(self, conn: sqlite3.Connection, token_id:str, wallet:str):
-        """ Check for token's existing wallet address. 
+        """ Check if the wallet has changed. If they're the same, return false (don't update).
         :param conn: db connection obj
         :param token_id: token_id unique search key for WHERE
         :param wallet: wallet address value to check DB against
@@ -78,6 +96,21 @@ class DB_HELPER:
         if db_wallet == wallet:
             return False
         return True
+
+    def update_owner(self, conn:sqlite3.Connection, token_id:str, wallet:str):
+        """ update a token's owner
+        :param conn: sqlite3 connection object
+        :param token_id: tokenID to update
+        :param wallet: tokenID's current owner wallet address
+        :return str: succesful msg
+        """
+        successful = "token updated successfully"
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        table_name, = cursor.fetchone()
+        cursor.execute("UPDATE {} SET (wallet = ?) WHERE token_id = ?".format(table_name), (wallet, token_id))
+        conn.commit()
+        return successful
 
     def update_token(self, conn:sqlite3.Connection, token_id:str, wallet:str, type:str='', modification:str='', color:str=''):
         """ update a token based on as-needed logic
@@ -99,8 +132,5 @@ class DB_HELPER:
             conn.commit()
         elif mod_bool and type_bool and wallet_bool:
             cursor.execute("UPDATE {} SET (wallet = ?, type = ?, modification = ?) WHERE token_id = ?".format(table_name), (wallet, type, modification, token_id))
-            conn.commit()
-        elif wallet_bool:
-            cursor.execute("UPDATE {} SET (wallet = ?) WHERE token_id = ?".format(table_name), (wallet, token_id))
             conn.commit()
         return successful
