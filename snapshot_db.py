@@ -77,7 +77,7 @@ class DB_HELPER:
         table_name, = cursor.fetchone()
         cursor.execute("SELECT wallet FROM {} WHERE token_id = (?)".format(table_name), [token_id])
         db_wallet, = cursor.fetchone()
-        if db_wallet == hb_staking | db_wallet == jp_staking:
+        if db_wallet == hb_staking or db_wallet == jp_staking:
             return True
         return False
 
@@ -108,7 +108,7 @@ class DB_HELPER:
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         table_name, = cursor.fetchone()
-        cursor.execute("UPDATE {} SET (wallet = ?) WHERE token_id = ?".format(table_name), (wallet, token_id))
+        cursor.execute("UPDATE {} SET wallet = ? WHERE token_id = ?".format(table_name), (wallet, token_id))
         conn.commit()
         return successful
 
